@@ -76,12 +76,11 @@ io.on('connection', (socket) => {
   });
 
   // AI 生成内容
-  socket.on('requestAiSuggestion', async (data) => {
+  socket.on('requestAiSuggestion', async ({ section }) => {
     try {
-      console.log('Generating AI suggestion for section:', data.section);
-      
-      if (!client) {
-        throw new Error('Azure OpenAI client not initialized');
+      const prompt = SECTION_PROMPTS[section];
+      if (!prompt) {
+        throw new Error('Invalid section');
       }
 
       const supplements = Array.from(supplementsData.values())
@@ -89,8 +88,8 @@ io.on('connection', (socket) => {
         .join('\n');
 
       const messages = [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `补充资料：\n${supplements || '暂无补充资料'}\n\n${SECTION_PROMPTS[data.section]}` }
+        { role: "system", content: "你是一个专业的商业模式分析专家，擅长使用商业画布工具分析商业模式。请用 Markdown 格式回答，包含标题、要点和详细说明。" },
+        { role: "user", content: `补充资料：\n${supplements || '暂无补充资料'}\n\n${prompt}` }
       ];
 
       console.log('Starting AI request with deployment:', process.env.AZURE_OPENAI_DEPLOYMENT_NAME);
@@ -102,14 +101,14 @@ io.on('connection', (socket) => {
 
       console.log('AI Response received:', result.choices[0].message.content);
       socket.emit('aiSuggestion', { 
-        section: data.section, 
+        section, 
         suggestion: result.choices[0].message.content 
       });
       
     } catch (error) {
       console.error('Error generating AI suggestion:', error);
       socket.emit('aiSuggestion', { 
-        section: data.section, 
+        section, 
         error: error.message 
       });
     }

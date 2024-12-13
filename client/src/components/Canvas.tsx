@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { Socket } from 'socket.io-client';
+import AiSuggestionModal from './AiSuggestionModal';
 
 interface Note {
   id: string;
@@ -432,6 +433,16 @@ const Canvas: React.FC<CanvasProps> = ({
     onDeleteNote(noteId);
   };
 
+  const handleAcceptAiSuggestion = () => {
+    if (aiSuggestion) {
+      onAddNote({
+        text: aiSuggestion.content,
+        position: aiSuggestion.section
+      });
+      setAiSuggestion(null);
+    }
+  };
+
   return (
     <CanvasContainer>
       {sections.map(section => (
@@ -486,102 +497,44 @@ const Canvas: React.FC<CanvasProps> = ({
               </ActionButton>
             </ButtonTooltip>
           </AddButtonContainer>
-
-          {activeInput === section.id && (
-            <div
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0,0,0,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 999
-              }}
-              onClick={handleClickOutside}
-            >
-              <InputContainer>
-                <Input
-                  ref={inputRef}
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleInputKeyDown}
-                  placeholder="输入标签内容，按回车确认，按ESC取消"
-                />
-              </InputContainer>
-            </div>
-          )}
         </Section>
       ))}
 
-      {aiSuggestion && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-        >
-          <div
-            style={{
-              background: 'white',
-              padding: '20px',
-              borderRadius: '8px',
-              width: '500px',
-              maxWidth: '90%',
-              maxHeight: '80vh',
-              overflowY: 'auto'
-            }}
-          >
-            <h3>AI 建议内容</h3>
-            <p>{aiSuggestion.content}</p>
-            <div
-              style={{
-                display: 'flex',
-                gap: '8px',
-                marginTop: '20px',
-                paddingTop: '16px',
-                borderTop: '1px solid #eee'
-              }}
-            >
-              <button onClick={() => setAiSuggestion(null)}>取消</button>
-              <button onClick={() => {
-                onAddNote({
-                  text: aiSuggestion.content,
-                  position: aiSuggestion.section
-                });
-                setAiSuggestion(null);
-              }}>使用此建议</button>
-            </div>
-          </div>
-        </div>
+      {activeInput && (
+        <InputContainer onClick={handleClickOutside}>
+          <Input
+            ref={inputRef}
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            placeholder="请输入内容，按回车键确认，按ESC键取消"
+          />
+        </InputContainer>
       )}
 
       {showExampleModal && activeSection && (
         <ExampleModal onClick={handleExampleModalClose}>
           <ExampleContent onClick={e => e.stopPropagation()}>
-            <h3>{sections.find(s => s.id === activeSection)?.name}的关键要素</h3>
+            <h3>{sections.find(s => s.id === activeSection)?.name} - 填写示例</h3>
             <ExampleList>
-              {examples[activeSection].map((example, index) => (
+              {examples[activeSection].map((item, index) => (
                 <ExampleItem key={index}>
-                  <span className="keyword">{example.keyword}</span>
-                  <span className="description">{example.description}</span>
+                  <span className="keyword">{item.keyword}</span>
+                  <span className="description">{item.description}</span>
                 </ExampleItem>
               ))}
             </ExampleList>
           </ExampleContent>
         </ExampleModal>
+      )}
+
+      {aiSuggestion && (
+        <AiSuggestionModal
+          content={aiSuggestion.content}
+          sectionName={sections.find(s => s.id === aiSuggestion.section)?.name || ''}
+          onClose={() => setAiSuggestion(null)}
+          onAccept={handleAcceptAiSuggestion}
+        />
       )}
     </CanvasContainer>
   );

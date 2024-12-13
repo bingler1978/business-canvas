@@ -1,5 +1,5 @@
 {
-  "name": "business-canvas-server",
+  "name": "server",
   "version": "1.0.0",
   "description": "Server for Business Model Canvas application",
   "main": "src/server.js",

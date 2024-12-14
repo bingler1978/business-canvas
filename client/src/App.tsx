@@ -103,37 +103,28 @@ const ParticipantsDropdown = styled.div<{ $isOpen: boolean }>`
   background: white;
   border: 1px solid #dee2e6;
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  min-width: 200px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: ${props => props.$isOpen ? 'block' : 'none'};
+  width: 100%;  
   z-index: 1000;
 `;
 
 const ParticipantItem = styled.div<{ $isSelected: boolean }>`
   padding: 8px 12px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  background: ${props => props.$isSelected ? '#f8f9fa' : 'transparent'};
   
   &:hover {
     background: #f8f9fa;
   }
-  
-  ${props => props.$isSelected && `
-    background: #e9ecef;
-    font-weight: 500;
-  `}
 
-  &:first-child {
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-  }
-
-  &:last-child {
-    border-bottom-left-radius: 4px;
-    border-bottom-right-radius: 4px;
+  span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 `;
 
@@ -232,20 +223,49 @@ const ModalTitle = styled.h3`
   color: #333;
 `;
 
+const FileInput = styled.input`
+  display: none;
+`;
+
+const UploadButton = styled.button`
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  color: #2196F3;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  
+  &:hover {
+    background: #f5f5f5;
+    border-radius: 4px;
+  }
+
+  .icon {
+    font-size: 16px;
+  }
+`;
+
 const ClearButton = styled.button`
   background: none;
   border: none;
+  padding: 8px 12px;
   color: #dc3545;
   cursor: pointer;
-  padding: 4px 8px;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
+  font-size: 14px;
   
   &:hover {
-    color: #c82333;
+    background: #f5f5f5;
+    border-radius: 4px;
   }
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
 `;
 
 const SupplementInput = styled.input`
@@ -269,13 +289,46 @@ const SupplementList = styled.div`
   gap: 8px;
 `;
 
-const SupplementItem = styled.div`
+const SupplementItem = styled.div<{ $expanded: boolean }>`
   padding: 8px;
   background: #f8f9fa;
   border-radius: 4px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e9ecef;
+  }
+
+  .content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  span {
+    flex: 1;
+    margin-right: 8px;
+    ${props => !props.$expanded && `
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    `}
+    ${props => props.$expanded && `
+      white-space: pre-wrap;
+    `}
+  }
+
+  .delete-button {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover .delete-button {
+    opacity: 1;
+  }
 `;
 
 const DeleteButton = styled.button`
@@ -346,6 +399,12 @@ interface Participant {
   color: string;
 }
 
+interface Supplement {
+  id: string;
+  text: string;
+  expanded?: boolean;
+}
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState('');
@@ -357,53 +416,56 @@ function App() {
   const [title, setTitle] = useState('商业模式画布');
   const [showSupplementModal, setShowSupplementModal] = useState(false);
   const [supplementInput, setSupplementInput] = useState('');
-  const [supplements, setSupplements] = useState<Array<{ id: string; text: string }>>([]);
+  const [supplements, setSupplements] = useState<Supplement[]>([]);
   const [showParticipantsDropdown, setShowParticipantsDropdown] = useState(false);
   const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
   const titleInputRef = useRef<HTMLInputElement>(null);
   const supplementInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const participants: Participant[] = [
-    { id: 'user1', nickname: '用户1', color: '#4CAF50' },
-    { id: 'user2', nickname: '用户2', color: '#2196F3' },
-    { id: 'user3', nickname: '用户3', color: '#FF9800' },
-    { id: 'user4', nickname: '用户4', color: '#9C27B0' },
-  ];
-
-  const currentUser = { id: 'user1', nickname: '用户1', color: '#4CAF50' };
-
-  const socket = socketService.connect();
+  const socket = useRef(socketService.connect()).current;
 
   useEffect(() => {
     if (isLoggedIn) {
       socket.emit('join', { id: userId, color: userColor });
 
-      socket.on('userList', (data: { users: User[] }) => {
-        setOnlineUsers(data.users);
-      });
+      // 请求现有的便签和补充说明
+      socket.emit('requestInitialData');
 
-      socket.on('noteAdded', (data) => {
-        console.log('Received note data:', data);
-        setNotes(prev => [...prev, data]);
-      });
+      const eventHandlers = {
+        userList: (data: { users: User[] }) => {
+          setOnlineUsers(data.users);
+        },
+        initialData: (data: { notes: Note[], supplements: Supplement[] }) => {
+          setNotes(data.notes);
+          setSupplements(data.supplements);
+        },
+        noteAdded: (data: any) => {
+          console.log('Received note data:', data);
+          setNotes(prev => [...prev, data]);
+        },
+        noteDeleted: (data: { noteId: string }) => {
+          setNotes(prev => prev.filter(note => note.id !== data.noteId));
+        },
+        supplementAdded: (data: Supplement) => {
+          setSupplements(prev => [...prev, data]);
+        },
+        supplementDeleted: (data: { supplementId: string }) => {
+          setSupplements(prev => prev.filter(s => s.id !== data.supplementId));
+        },
+        supplementsCleared: () => {
+          setSupplements([]);
+        }
+      };
 
-      socket.on('noteDeleted', (data: { noteId: string }) => {
-        setNotes(prev => prev.filter(note => note.id !== data.noteId));
-      });
-
-      socket.on('supplementAdded', (data: { id: string; text: string }) => {
-        setSupplements(prev => [...prev, data]);
-      });
-
-      socket.on('supplementDeleted', (data: { supplementId: string }) => {
-        setSupplements(prev => prev.filter(s => s.id !== data.supplementId));
-      });
-
-      socket.on('supplementsCleared', () => {
-        setSupplements([]);
+      Object.entries(eventHandlers).forEach(([event, handler]) => {
+        socket.on(event, handler);
       });
 
       return () => {
+        Object.keys(eventHandlers).forEach(event => {
+          socket.off(event);
+        });
         socketService.disconnect();
       };
     }
@@ -485,7 +547,7 @@ function App() {
     }
   };
 
-  const handleSupplementClick = () => {
+  const handleSupplementButtonClick = () => {
     setShowSupplementModal(true);
     setTimeout(() => {
       supplementInputRef.current?.focus();
@@ -494,9 +556,14 @@ function App() {
 
   const handleSupplementInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && supplementInput.trim()) {
+      if (supplements.length >= 100) {
+        alert('最多只能添加100条补充资料');
+        return;
+      }
       const newSupplement = {
         id: Date.now().toString(),
-        text: supplementInput.trim()
+        text: supplementInput.trim(),
+        expanded: false
       };
       socket.emit('addSupplement', newSupplement);
       setSupplementInput('');
@@ -517,6 +584,50 @@ function App() {
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    if (file.type !== 'text/plain') {
+      alert('请上传文本文件(.txt)');
+      return;
+    }
+
+    if (supplements.length >= 100) {
+      alert('最多只能添加100条补充资料');
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      const remainingSlots = 100 - supplements.length;
+      const linesToAdd = lines.slice(0, remainingSlots);
+
+      linesToAdd.forEach((line, index) => {
+        const newSupplement = {
+          id: Date.now().toString() + '-' + index,
+          text: line.trim(),
+          expanded: false
+        };
+        socket.emit('addSupplement', newSupplement);
+      });
+
+      if (lines.length > remainingSlots) {
+        alert(`由于100条限制，只添加了前${remainingSlots}条内容`);
+      }
+    } catch (error) {
+      alert('读取文件失败');
+    }
+    
+    event.target.value = '';
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const toggleParticipant = (participantId: string) => {
     setSelectedParticipants(prev => {
       const newSet = new Set(prev);
@@ -527,6 +638,12 @@ function App() {
       }
       return newSet;
     });
+  };
+
+  const handleSupplementClick = (id: string) => {
+    setSupplements(prev => prev.map(item => 
+      item.id === id ? { ...item, expanded: !item.expanded } : item
+    ));
   };
 
   // 过滤无效的笔记
@@ -569,24 +686,24 @@ function App() {
           <Title onClick={handleTitleClick}>{title}</Title>
         )}
         <HeaderGroup>
-          <SupplementButton onClick={() => setShowSupplementModal(true)}>
-            <span className="icon">📝</span>
+          <SupplementButton onClick={handleSupplementButtonClick}>
+            <span className="icon">📋</span>
             <span>补充说明</span>
           </SupplementButton>
           <ParticipantsButton onClick={() => setShowParticipantsDropdown(!showParticipantsDropdown)}>
             <span className="icon">👥</span>
             <span>参与者</span>
             <ParticipantsDropdown $isOpen={showParticipantsDropdown}>
-              {participants
-                .filter(p => p.id !== currentUser.id)
-                .map(participant => (
+              {onlineUsers
+                .filter(user => user.id !== userId)
+                .map(user => (
                   <ParticipantItem
-                    key={participant.id}
-                    $isSelected={selectedParticipants.has(participant.id)}
-                    onClick={() => toggleParticipant(participant.id)}
+                    key={user.id}
+                    $isSelected={selectedParticipants.has(user.id)}
+                    onClick={() => toggleParticipant(user.id)}
                   >
-                    <ColorDot color={participant.color} />
-                    <span>{participant.nickname}</span>
+                    <ColorDot color={user.color} />
+                    <span>{user.id}</span>
                   </ParticipantItem>
                 ))}
             </ParticipantsDropdown>
@@ -618,24 +735,50 @@ function App() {
           <SupplementContent onClick={e => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>补充资料</ModalTitle>
-              <ClearButton onClick={handleClearSupplements}>
-                <span>🗑️</span>
-                <span>清空</span>
-              </ClearButton>
+              <ButtonGroup>
+                <UploadButton onClick={handleUploadClick}>
+                  <span className="icon">📄</span>
+                  <span>上传文件</span>
+                </UploadButton>
+                <ClearButton onClick={handleClearSupplements}>
+                  <span>清空</span>
+                </ClearButton>
+              </ButtonGroup>
             </ModalHeader>
+            <FileInput 
+              type="file" 
+              accept=".txt"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+            />
             <SupplementInput
               ref={supplementInputRef}
               type="text"
               value={supplementInput}
-              onChange={(e) => setSupplementInput(e.target.value)}
+              onChange={e => setSupplementInput(e.target.value)}
               onKeyDown={handleSupplementInputKeyDown}
-              placeholder="输入补充信息，按回车添加"
+              placeholder="输入补充资料，按回车添加"
             />
             <SupplementList>
-              {supplements.map(item => (
-                <SupplementItem key={item.id}>
-                  <span>{item.text}</span>
-                  <DeleteButton onClick={() => handleDeleteSupplement(item.id)}>×</DeleteButton>
+              {supplements.map(supplement => (
+                <SupplementItem 
+                  key={supplement.id} 
+                  $expanded={!!supplement.expanded}
+                  onClick={() => handleSupplementClick(supplement.id)}
+                >
+                  <div className="content">
+                    <span>{supplement.text}</span>
+                    <DeleteButton 
+                      className="delete-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSupplement(supplement.id);
+                      }}
+                    >
+                      ×
+                    </DeleteButton>
+                  </div>
                 </SupplementItem>
               ))}
             </SupplementList>

@@ -1,36 +1,41 @@
 import { io, Socket } from 'socket.io-client';
 
+const SOCKET_URL = process.env.NODE_ENV === 'production' 
+  ? `http://你的服务器IP:3000`  // 生产环境使用服务器IP
+  : 'http://localhost:3001';    // 开发环境使用localhost
+
 class SocketService {
   private socket: Socket | null = null;
 
-  connect() {
+  connect(): Socket {
     console.log('Connecting to WebSocket server...');
-    this.socket = io('http://localhost:3001', {
-      transports: ['websocket', 'polling'],
-      withCredentials: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 10000
-    });
-    
-    this.socket.on('connect', () => {
-      console.log('WebSocket connected! Socket ID:', this.socket?.id);
-    });
+    if (!this.socket) {
+      this.socket = io(SOCKET_URL, {
+        transports: ['websocket', 'polling'],
+        withCredentials: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 10000
+      });
+      
+      this.socket.on('connect', () => {
+        console.log('WebSocket connected! Socket ID:', this.socket?.id);
+      });
 
-    this.socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
-    });
+      this.socket.on('connect_error', (error) => {
+        console.error('WebSocket connection error:', error);
+      });
 
-    this.socket.on('disconnect', (reason) => {
-      console.log('WebSocket disconnected:', reason);
-    });
-
+      this.socket.on('disconnect', (reason) => {
+        console.log('WebSocket disconnected:', reason);
+      });
+    }
     return this.socket;
   }
 
-  disconnect() {
+  disconnect(): void {
+    console.log('Disconnecting from WebSocket server...');
     if (this.socket) {
-      console.log('Disconnecting from WebSocket server...');
       this.socket.disconnect();
       this.socket = null;
     }

@@ -426,50 +426,41 @@ function App() {
   const socket = useRef(socketService.connect()).current;
 
   useEffect(() => {
-    if (isLoggedIn) {
-      socket.emit('join', { id: userId, color: userColor });
+    if (!socket || !isLoggedIn) return;
 
-      // 请求现有的便签和补充说明
-      socket.emit('requestInitialData');
+    socket.emit('join', { id: userId, color: userColor });
 
-      const eventHandlers = {
-        userList: (data: { users: User[] }) => {
-          setOnlineUsers(data.users);
-        },
-        initialData: (data: { notes: Note[], supplements: Supplement[] }) => {
-          setNotes(data.notes);
-          setSupplements(data.supplements);
-        },
-        noteAdded: (data: any) => {
-          console.log('Received note data:', data);
-          setNotes(prev => [...prev, data]);
-        },
-        noteDeleted: (data: { noteId: string }) => {
-          setNotes(prev => prev.filter(note => note.id !== data.noteId));
-        },
-        supplementAdded: (data: Supplement) => {
-          setSupplements(prev => [...prev, data]);
-        },
-        supplementDeleted: (data: { supplementId: string }) => {
-          setSupplements(prev => prev.filter(s => s.id !== data.supplementId));
-        },
-        supplementsCleared: () => {
-          setSupplements([]);
+    const eventHandlers = {
+      initialData: (data: { notes: Note[] }) => {
+        setNotes(data.notes);
+      },
+      noteAdded: (note: Note) => {
+        setNotes(prev => [...prev, note]);
+      },
+      noteDeleted: ({ noteId }: { noteId: string }) => {
+        setNotes(prev => prev.filter(note => note.id !== noteId));
+      },
+      userList: ({ users }: { users: User[] }) => {
+        setOnlineUsers(users);
+      },
+      aiSuggestion: (data: { section: string; suggestion?: string; error?: string }) => {
+        console.log('Received AI suggestion:', data);
+        if (data.error) {
+          alert(`AI生成错误: ${data.error}`);
         }
-      };
+      }
+    };
 
-      Object.entries(eventHandlers).forEach(([event, handler]) => {
-        socket.on(event, handler);
+    Object.entries(eventHandlers).forEach(([event, handler]) => {
+      socket.on(event, handler);
+    });
+
+    return () => {
+      Object.keys(eventHandlers).forEach(event => {
+        socket.off(event);
       });
-
-      return () => {
-        Object.keys(eventHandlers).forEach(event => {
-          socket.off(event);
-        });
-        socketService.disconnect();
-      };
-    }
-  }, [isLoggedIn, userId, userColor]);
+    };
+  }, [socket, isLoggedIn, userId, userColor]);
 
   const handleLogin = (nickname: string) => {
     setUserId(nickname);
@@ -525,19 +516,23 @@ function App() {
     }
   };
 
-  const handleAddNote = (note: { text: string; position: SectionId }) => {
+  const handleAddNote = ({ text, position }: { text: string; position: SectionId }) => {
+    if (!socket || !isLoggedIn) return;
+    
     const newNote: Note = {
       id: Date.now().toString(),
-      text: note.text,
-      position: note.position,
-      color: userColor,
-      author: userId
+      text,
+      position,
+      author: userId,
+      color: userColor
     };
-    socket.emit('addNote', { note: newNote });
+    
+    socket.emit('add_note', newNote);
   };
 
   const handleDeleteNote = (noteId: string) => {
-    socket.emit('deleteNote', { noteId });
+    if (!socket || !isLoggedIn) return;
+    socket.emit('delete_note', noteId);
   };
 
   const handleGenerateAI = (sectionId: string) => {

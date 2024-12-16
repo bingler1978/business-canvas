@@ -1,43 +1,23 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NODE_ENV === 'production' 
-  ? `http://你的服务器IP:3000`  // 生产环境使用服务器IP
-  : 'http://localhost:3001';    // 开发环境使用localhost
+const SOCKET_URL = 'http://localhost:3001';
 
 class SocketService {
   private socket: Socket | null = null;
 
   connect(): Socket {
-    console.log('Connecting to WebSocket server...');
     if (!this.socket) {
-      this.socket = io(SOCKET_URL, {
-        transports: ['websocket', 'polling'],
-        withCredentials: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 10000
-      });
-      
-      this.socket.on('connect', () => {
-        console.log('WebSocket connected! Socket ID:', this.socket?.id);
-      });
-
-      this.socket.on('connect_error', (error) => {
-        console.error('WebSocket connection error:', error);
-      });
-
-      this.socket.on('disconnect', (reason) => {
-        console.log('WebSocket disconnected:', reason);
-      });
+      this.socket = io(SOCKET_URL);
+      console.log('Socket connected');
     }
     return this.socket;
   }
 
   disconnect(): void {
-    console.log('Disconnecting from WebSocket server...');
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
+      console.log('Socket disconnected');
     }
   }
 

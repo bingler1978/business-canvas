@@ -646,6 +646,21 @@ function App() {
     ));
   };
 
+  const getExampleContent = (section: string) => {
+    const examples: { [key: string]: string } = {
+      'key-partners': '关键合作伙伴\n\n定义：建立和维护重要的商业伙伴关系网络，以优化商业模式的运作。\n\n示例：\n- 供应商和供货商\n- 战略联盟伙伴\n- 合资企业',
+      'key-activities': '关键业务\n\n定义：为实现价值主张，企业必须开展的最重要活动。\n\n示例：\n- 产品开发和创新\n- 平台维护和运营\n- 供应链管理',
+      'key-resources': '核心资源\n\n定义：执行商业模式所需的最重要资产。\n\n示例：\n- 人力资源\n- 知识产权\n- 品牌资源\n- 技术设施',
+      'value-propositions': '价值主张\n\n定义：企业为特定客户群体创造的独特价值。\n\n示例：\n- 产品创新性\n- 性能优势\n- 定制化服务\n- 一站式解决方案',
+      'customer-relationships': '客户关系\n\n定义：企业与特定客户群体建立和维护的关系类型。\n\n示例：\n- 个性化服务\n- 自助服务\n- 社区互动\n- 会员制度',
+      'channels': '渠道通路\n\n定义：企业如何与客户群体沟通并向其传递价值主张。\n\n示例：\n- 线上渠道\n- 实体店铺\n- 分销网络\n- 合作伙伴渠道',
+      'customer-segments': '客户细分\n\n定义：确定企业所服务的不同类型的客户群体。\n\n示例：\n- 大众市场\n- 细分市场\n- 多边平台\n- 特定行业客户',
+      'cost-structure': '成本结构\n\n定义：运营商业模式所产生的主要成本。\n\n示例：\n- 固定成本\n- 可变成本\n- 规模经济\n- 范围经济',
+      'revenue-streams': '收入来源\n\n定义：企业从各个客户群体获得的收入。\n\n示例：\n- 产品销售\n- 使用费\n- 订阅费\n- 广告收入'
+    };
+    return examples[section] || '点击添加内容';
+  };
+
   // 过滤无效的笔记
   const validNotes = notes.filter((note): note is Note => 
     note !== null && 
@@ -729,6 +744,7 @@ function App() {
         onAddNote={handleAddNote}
         onDeleteNote={handleDeleteNote}
         onGenerateAI={(sectionId: string) => handleGenerateAI(sectionId)}
+        getExampleContent={getExampleContent}
       />
       {showSupplementModal && (
         <SupplementModal onClick={handleSupplementModalClose}>

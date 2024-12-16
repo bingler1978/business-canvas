@@ -19,6 +19,7 @@ interface CanvasProps {
   onAddNote: (note: { text: string; position: SectionId }) => void;
   onDeleteNote: (noteId: string) => void;
   onGenerateAI: (sectionId: string) => void;
+  getExampleContent: (section: string) => string;
 }
 
 type SectionId = 'kp' | 'ka' | 'vp' | 'cr' | 'cs' | 'kr' | 'ch' | 'c' | 'r';
@@ -26,19 +27,20 @@ type SectionId = 'kp' | 'ka' | 'vp' | 'cr' | 'cs' | 'kr' | 'ch' | 'c' | 'r';
 interface Section {
   id: SectionId;
   name: string;
+  title: string;
   gridArea: string;
 }
 
 const sections: readonly Section[] = [
-  { id: 'kp', name: '重要伙伴', gridArea: '1 / 1 / 3 / 3' },
-  { id: 'ka', name: '关键业务', gridArea: '1 / 3 / 2 / 5' },
-  { id: 'kr', name: '重要资源', gridArea: '2 / 3 / 3 / 5' },
-  { id: 'vp', name: '价值主张', gridArea: '1 / 5 / 3 / 7' },
-  { id: 'cr', name: '客户关系', gridArea: '1 / 7 / 2 / 9' },
-  { id: 'ch', name: '渠道通路', gridArea: '2 / 7 / 3 / 9' },
-  { id: 'cs', name: '客户细分', gridArea: '1 / 9 / 3 / 11' },
-  { id: 'c', name: '成本结构', gridArea: '3 / 1 / 4 / 6' },
-  { id: 'r', name: '收入来源', gridArea: '3 / 6 / 4 / 11' }
+  { id: 'kp', name: 'key-partners', title: '关键合作', gridArea: '1 / 1 / 3 / 3' },
+  { id: 'ka', name: 'key-activities', title: '关键业务', gridArea: '1 / 3 / 2 / 5' },
+  { id: 'kr', name: 'key-resources', title: '核心资源', gridArea: '2 / 3 / 3 / 5' },
+  { id: 'vp', name: 'value-propositions', title: '价值主张', gridArea: '1 / 5 / 3 / 7' },
+  { id: 'cr', name: 'customer-relationships', title: '客户关系', gridArea: '1 / 7 / 2 / 9' },
+  { id: 'ch', name: 'channels', title: '渠道通路', gridArea: '2 / 7 / 3 / 9' },
+  { id: 'cs', name: 'customer-segments', title: '客户细分', gridArea: '1 / 9 / 3 / 11' },
+  { id: 'c', name: 'cost-structure', title: '成本结构', gridArea: '3 / 1 / 4 / 6' },
+  { id: 'r', name: 'revenue-streams', title: '收入来源', gridArea: '3 / 6 / 4 / 11' }
 ] as const;
 
 const CanvasContainer = styled.div`
@@ -196,27 +198,37 @@ const Tag = styled.div`
 
 const InputContainer = styled.div`
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 400px;
-  background: white;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
   z-index: 1000;
+  padding: 0 20px;
+
+  textarea {
+    width: 100%;
+    max-width: 300px;
+    background: white;
+  }
 `;
 
-const Input = styled.input`
+const Input = styled.textarea`
   width: 100%;
-  padding: 0.8rem;
+  height: 40px;
+  padding: 8px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 1rem;
-  
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
   &:focus {
-    outline: none;
-    border-color: #4CAF50;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
   }
 `;
 
@@ -297,51 +309,60 @@ const ExampleItem = styled.div`
   }
 `;
 
-const examples: Record<SectionId, Array<{ keyword: string; description: string }>> = {
+const examples: { [key in SectionId]: Array<{ title: string; description: string }> } = {
   kp: [
-    { keyword: '供应商', description: '为企业提供原材料、设备等资源的合作伙伴' },
-    { keyword: '战略联盟', description: '共同开发市场或产品的合作伙伴关系' },
-    { keyword: '外包商', description: '提供非核心业务服务的合作方' }
+    { title: '定义', description: '建立和维护重要的商业伙伴关系网络，以优化商业模式的运作。通过合作伙伴关系来降低风险、获取资源或优化业务流程。' },
+    { title: '供应商', description: '为企业提供关键资源的可靠供应商' },
+    { title: '战略联盟', description: '与非竞争对手建立的战略合作关系' },
+    { title: '合资企业', description: '共同开发新业务的合作伙伴' }
   ],
   ka: [
-    { keyword: '研发', description: '产品或服务的创新和改进活动' },
-    { keyword: '生产', description: '产品制造或服务交付的核心流程' },
-    { keyword: '营销', description: '市场推广和品牌建设活动' }
+    { title: '定义', description: '为实现价值主张，企业必须开展的最重要活动。这些活动是企业成功运营所必需的关键行动。' },
+    { title: '生产', description: '设计、制造和交付产品' },
+    { title: '问题解决', description: '为客户提供新的解决方案' },
+    { title: '平台/网络', description: '平台管理、服务供应和推广' }
   ],
   kr: [
-    { keyword: '人力资源', description: '员工技能和专业知识' },
-    { keyword: '知识产权', description: '专利、商标等无形资产' },
-    { keyword: '基础设施', description: '办公场所、设备等有形资产' }
+    { title: '定义', description: '执行商业模式所需的最重要资产。这些资源让企业创造并提供价值主张、维护客户关系并创造收入。' },
+    { title: '实物资产', description: '生产设施、建筑物、车辆和系统' },
+    { title: '知识产权', description: '品牌、专利、版权和数据' },
+    { title: '人力资源', description: '员工及其知识和创造力' }
   ],
   vp: [
-    { keyword: '创新性', description: '产品或服务的独特优势和创新特点' },
-    { keyword: '性价比', description: '产品或服务的价格优势' },
-    { keyword: '便利性', description: '使用或获取产品/服务的便捷程度' }
+    { title: '定义', description: '企业为特定客户群体创造的独特价值。解决客户问题或满足客户需求的产品和服务组合。' },
+    { title: '新颖性', description: '满足全新的需求' },
+    { title: '性能', description: '提升产品或服务性能' },
+    { title: '定制化', description: '满足特定客户需求' }
   ],
   cr: [
-    { keyword: '个性化服务', description: '根据客户需求提供定制化解决方案' },
-    { keyword: '自助服务', description: '客户自主完成服务过程' },
-    { keyword: '社区互动', description: '建立客户社区，促进交流和反馈' }
+    { title: '定义', description: '企业与特定客户群体建立和维护的关系类型。这些关系可以从自动化到个性化服务不等。' },
+    { title: '个人支持', description: '通过员工与客户互动' },
+    { title: '自助服务', description: '提供自助服务工具' },
+    { title: '社区', description: '促进用户之间的互动' }
   ],
   ch: [
-    { keyword: '直销', description: '直接面向终端客户销售' },
-    { keyword: '代理商', description: '通过中间商进行销售' },
-    { keyword: '电商平台', description: '通过线上渠道销售' }
+    { title: '定义', description: '企业如何与客户群体沟通并向其传递价值主张。包括沟通、分销和销售渠道。' },
+    { title: '销售团队', description: '直接销售团队' },
+    { title: '网络销售', description: '电子商务网站' },
+    { title: '合作伙伴', description: '通过合作伙伴销售' }
   ],
   cs: [
-    { keyword: '大众市场', description: '面向广泛的消费者群体' },
-    { keyword: '细分市场', description: '专注于特定的客户群体' },
-    { keyword: '多边平台', description: '服务于多个相互依赖的客户群' }
+    { title: '定义', description: '确定企业所服务的不同类型的客户群体。一个企业可以服务于一个或多个客户群体，每个群体可能有不同的需求和特征。' },
+    { title: '大众市场', description: '面向广泛的客户群' },
+    { title: '利基市场', description: '服务特定细分市场' },
+    { title: '多边平台', description: '服务相互依赖的客户群' }
   ],
   c: [
-    { keyword: '固定成本', description: '与产量无关的必要支出' },
-    { keyword: '可变成本', description: '随产量变化的相关支出' },
-    { keyword: '规模效应', description: '产量增加带来的成本优势' }
+    { title: '定义', description: '运营商业模式所产生的主要成本。创造和传递价值、维护客户关系和创造收入都会产生成本。' },
+    { title: '固定成本', description: '工资、租金、设施' },
+    { title: '可变成本', description: '原材料、销售佣金' },
+    { title: '规模经济', description: '批量采购优惠' }
   ],
   r: [
-    { keyword: '产品收入', description: '产品销售获得的收入' },
-    { keyword: '服务收入', description: '提供服务获得的收入' },
-    { keyword: '广告收入', description: '广告投放获得的收入' }
+    { title: '定义', description: '企业从各个客户群体获得的收入。企业必须思考每个客户群体愿意支付的价值。' },
+    { title: '资产销售', description: '销售产品所有权' },
+    { title: '使用费', description: '基于服务使用量收费' },
+    { title: '订阅费', description: '持续访问服务的费用' }
   ]
 };
 
@@ -352,7 +373,8 @@ const Canvas: React.FC<CanvasProps> = ({
   notes,
   onAddNote,
   onDeleteNote,
-  onGenerateAI
+  onGenerateAI,
+  getExampleContent
 }) => {
   const [activeInput, setActiveInput] = useState<SectionId | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -360,7 +382,7 @@ const Canvas: React.FC<CanvasProps> = ({
   const [activeSection, setActiveSection] = useState<SectionId | null>(null);
   const [loadingSection, setLoadingSection] = useState<SectionId | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<{ section: SectionId; content: string } | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     socket.on('aiSuggestion', (data: { section: string; suggestion?: string; error?: string }) => {
@@ -382,7 +404,10 @@ const Canvas: React.FC<CanvasProps> = ({
     setActiveInput(sectionId);
     setInputValue('');
     setTimeout(() => {
-      inputRef.current?.focus();
+      const input = document.querySelector(`textarea[data-section="${sectionId}"]`) as HTMLTextAreaElement;
+      if (input) {
+        input.focus();
+      }
     }, 0);
   };
 
@@ -409,17 +434,25 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && inputValue.trim() && activeInput) {
-      onAddNote({
-        text: inputValue.trim(),
-        position: activeInput
-      });
-      setInputValue('');
+    if (e.key === 'Enter' && !e.shiftKey && activeInput) {
+      e.preventDefault();
+      if (inputValue.trim()) {
+        onAddNote({ text: inputValue.trim(), position: activeInput });
+      }
       setActiveInput(null);
+      setInputValue('');
     } else if (e.key === 'Escape') {
-      setInputValue('');
       setActiveInput(null);
+      setInputValue('');
     }
+  };
+
+  const handleInputConfirm = (sectionId: SectionId) => {
+    if (inputValue.trim()) {
+      onAddNote({ text: inputValue.trim(), position: sectionId });
+    }
+    setActiveInput(null);
+    setInputValue('');
   };
 
   const handleClickOutside = (e: React.MouseEvent) => {
@@ -443,12 +476,17 @@ const Canvas: React.FC<CanvasProps> = ({
     }
   };
 
+  const getSectionName = (sectionId: SectionId) => {
+    const section = sections.find(s => s.id === sectionId);
+    return section ? section.name : '';
+  };
+
   return (
     <CanvasContainer>
       {sections.map(section => (
         <Section key={section.id} $area={section.gridArea}>
           <SectionHeader>
-            <SectionTitle>{section.name}</SectionTitle>
+            <SectionTitle>{section.title}</SectionTitle>
           </SectionHeader>
           
           <TopButtonGroup>
@@ -505,8 +543,9 @@ const Canvas: React.FC<CanvasProps> = ({
           <Input
             ref={inputRef}
             value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
+            onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleInputKeyDown}
+            data-section={activeInput}
             placeholder="请输入内容，按回车键确认，按ESC键取消"
           />
         </InputContainer>
@@ -515,11 +554,11 @@ const Canvas: React.FC<CanvasProps> = ({
       {showExampleModal && activeSection && (
         <ExampleModal onClick={handleExampleModalClose}>
           <ExampleContent onClick={e => e.stopPropagation()}>
-            <h3>{sections.find(s => s.id === activeSection)?.name} - 填写示例</h3>
+            <h3>{sections.find(s => s.id === activeSection)?.title} - 填写示例</h3>
             <ExampleList>
               {examples[activeSection].map((item, index) => (
                 <ExampleItem key={index}>
-                  <span className="keyword">{item.keyword}</span>
+                  <span className="keyword">{item.title}</span>
                   <span className="description">{item.description}</span>
                 </ExampleItem>
               ))}
@@ -531,7 +570,7 @@ const Canvas: React.FC<CanvasProps> = ({
       {aiSuggestion && (
         <AiSuggestionModal
           content={aiSuggestion.content}
-          sectionName={sections.find(s => s.id === aiSuggestion.section)?.name || ''}
+          sectionName={sections.find(s => s.id === aiSuggestion.section)?.title || ''}
           onClose={() => setAiSuggestion(null)}
           onAccept={handleAcceptAiSuggestion}
         />

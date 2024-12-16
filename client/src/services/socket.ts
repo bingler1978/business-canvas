@@ -1,8 +1,9 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NODE_ENV === 'production' 
-  ? `http://你的服务器IP:3000`  // 生产环境使用服务器IP
-  : 'http://localhost:3001';    // 开发环境使用localhost
+const SOCKET_URL = process.env.REACT_APP_API_URL || 
+  (process.env.NODE_ENV === 'production' 
+    ? 'https://canvas.yuanjianai.com'  
+    : 'http://localhost:3001');
 
 class SocketService {
   private socket: Socket | null = null;

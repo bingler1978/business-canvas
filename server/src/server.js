@@ -10,9 +10,21 @@ const { SYSTEM_PROMPT, SECTION_PROMPTS } = require('./prompts');
 const app = express();
 const server = http.createServer(app);
 
+// 配置允许的域名
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://canvas.yuanjianai.com'
+];
+
 // 配置 CORS
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('不允许的来源'));
+    }
+  },
   methods: ["GET", "POST"],
   credentials: true,
   optionsSuccessStatus: 204
@@ -23,7 +35,13 @@ app.use(express.json());
 // 配置 Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: function(origin, callback) {
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('不允许的来源'));
+      }
+    },
     methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["my-custom-header"],

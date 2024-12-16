@@ -34,6 +34,11 @@ const io = new Server(server, {
 
 // 存储补充资料的 Map
 const supplementsData = new Map();
+// 存储便签的数组
+const notesData = [];
+
+// 在线用户管理
+const onlineUsers = new Map();
 
 // Azure OpenAI configuration
 let client = null;
@@ -55,9 +60,6 @@ try {
   console.error('Failed to initialize Azure OpenAI client:', error);
 }
 
-// 在线用户管理
-const onlineUsers = new Map();
-
 io.on('connection', (socket) => {
   console.log('Client connected');
 
@@ -66,6 +68,9 @@ io.on('connection', (socket) => {
     console.log('User joined:', data);
     onlineUsers.set(socket.id, data);
     io.emit('userList', { users: Array.from(onlineUsers.values()) });
+    
+    // 发送现有的便签给新用户
+    socket.emit('initialNotes', { notes: notesData });
   });
 
   socket.on('disconnect', () => {
@@ -117,11 +122,16 @@ io.on('connection', (socket) => {
   // 添加笔记
   socket.on('addNote', ({ note }) => {
     console.log('Adding note:', note);
+    notesData.push(note);
     io.emit('noteAdded', note);
   });
 
   // 删除笔记
   socket.on('deleteNote', ({ noteId }) => {
+    const index = notesData.findIndex(note => note.id === noteId);
+    if (index !== -1) {
+      notesData.splice(index, 1);
+    }
     io.emit('noteDeleted', { noteId });
   });
 

@@ -436,16 +436,18 @@ function App() {
         userList: (data: { users: User[] }) => {
           setOnlineUsers(data.users);
         },
-        initialData: (data: { notes: Note[], supplements: Supplement[] }) => {
+        initialNotes: (data: { notes: Note[] }) => {
           setNotes(data.notes);
-          setSupplements(data.supplements);
         },
-        noteAdded: (data: any) => {
-          console.log('Received note data:', data);
-          setNotes(prev => [...prev, data]);
+        noteAdded: (note: Note) => {
+          setNotes(prev => [...prev, note]);
         },
         noteDeleted: (data: { noteId: string }) => {
           setNotes(prev => prev.filter(note => note.id !== data.noteId));
+        },
+        initialData: (data: { notes: Note[], supplements: Supplement[] }) => {
+          setNotes(data.notes);
+          setSupplements(data.supplements);
         },
         supplementAdded: (data: Supplement) => {
           setSupplements(prev => [...prev, data]);

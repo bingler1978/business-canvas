@@ -16,8 +16,27 @@ class SocketService {
   connect(): Socket {
     console.log('Connecting to WebSocket server at:', SOCKET_URL);
     if (!this.socket) {
-      this.socket = io(SOCKET_URL);
-      console.log('Socket connected');
+      this.socket = io(SOCKET_URL, {
+        transports: ['websocket', 'polling'],
+        withCredentials: true,
+        path: '/socket.io',
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        autoConnect: true,
+        forceNew: true
+      });
+
+      this.socket.on('connect', () => {
+        console.log('Socket connected, ID:', this.socket?.id);
+      });
+
+      this.socket.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+      });
+
+      this.socket.on('disconnect', (reason) => {
+        console.log('Socket disconnected:', reason);
+      });
     }
     return this.socket;
   }

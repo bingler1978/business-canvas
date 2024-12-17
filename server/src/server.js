@@ -36,9 +36,11 @@ app.use(cors({
         callback(null, true);
         return;
       }
-      
-      callback(new Error('不允许的来源'));
+
+      console.log('收到来自以下地址的请求:', origin);
+      callback(null, true);
     } catch (error) {
+      console.error('无效的来源:', origin, error);
       callback(new Error('无效的来源'));
     }
   },
@@ -74,9 +76,11 @@ const io = new Server(server, {
           callback(null, true);
           return;
         }
-        
-        callback(new Error('不允许的来源'));
+
+        console.log('收到WebSocket连接请求:', origin);
+        callback(null, true);
       } catch (error) {
+        console.error('无效的WebSocket来源:', origin, error);
         callback(new Error('无效的来源'));
       }
     },

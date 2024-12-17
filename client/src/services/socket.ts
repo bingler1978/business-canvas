@@ -1,11 +1,20 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = 'http://localhost:3001';
+// 获取当前域名和协议
+const getBaseUrl = () => {
+  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+  const hostname = window.location.hostname;
+  const port = process.env.REACT_APP_API_PORT || '3001';
+  return `${protocol}//${hostname}:${port}`;
+};
+
+const SOCKET_URL = process.env.REACT_APP_API_URL || getBaseUrl();
 
 class SocketService {
   private socket: Socket | null = null;
 
   connect(): Socket {
+    console.log('Connecting to WebSocket server at:', SOCKET_URL);
     if (!this.socket) {
       this.socket = io(SOCKET_URL);
       console.log('Socket connected');

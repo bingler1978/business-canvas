@@ -1,4 +1,6 @@
-require('dotenv').config();
+// 根据环境加载配置文件
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+require('dotenv').config({ path: envFile });
 
 const express = require('express');
 const http = require('http');
@@ -12,7 +14,34 @@ const server = http.createServer(app);
 
 // 配置 CORS
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: function(origin, callback) {
+    // 允许没有 origin 的请求（比如同源请求）
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    
+    try {
+      // 解析请求源的 URL
+      const originUrl = new URL(origin);
+      
+      // 检查是否是允许的端口
+      if (originUrl.port === '3000') {
+        callback(null, true);
+        return;
+      }
+      
+      // 检查是否是允许的域名
+      if (originUrl.hostname === 'canvas.yuanjianai.com') {
+        callback(null, true);
+        return;
+      }
+      
+      callback(new Error('不允许的来源'));
+    } catch (error) {
+      callback(new Error('无效的来源'));
+    }
+  },
   methods: ["GET", "POST"],
   credentials: true,
   optionsSuccessStatus: 204
@@ -23,7 +52,34 @@ app.use(express.json());
 // 配置 Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: function(origin, callback) {
+      // 允许没有 origin 的请求（比如同源请求）
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      
+      try {
+        // 解析请求源的 URL
+        const originUrl = new URL(origin);
+        
+        // 检查是否是允许的端口
+        if (originUrl.port === '3000') {
+          callback(null, true);
+          return;
+        }
+        
+        // 检查是否是允许的域名
+        if (originUrl.hostname === 'canvas.yuanjianai.com') {
+          callback(null, true);
+          return;
+        }
+        
+        callback(new Error('不允许的来源'));
+      } catch (error) {
+        callback(new Error('无效的来源'));
+      }
+    },
     methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["my-custom-header"],
@@ -34,6 +90,11 @@ const io = new Server(server, {
 
 // 存储补充资料的 Map
 const supplementsData = new Map();
+// 存储便签的数组
+const notesData = [];
+
+// 在线用户管理
+const onlineUsers = new Map();
 
 // Azure OpenAI configuration
 let client = null;
@@ -55,9 +116,6 @@ try {
   console.error('Failed to initialize Azure OpenAI client:', error);
 }
 
-// 在线用户管理
-const onlineUsers = new Map();
-
 io.on('connection', (socket) => {
   console.log('Client connected');
 
@@ -66,6 +124,9 @@ io.on('connection', (socket) => {
     console.log('User joined:', data);
     onlineUsers.set(socket.id, data);
     io.emit('userList', { users: Array.from(onlineUsers.values()) });
+    
+    // 发送现有的便签给新用户
+    socket.emit('initialNotes', { notes: notesData });
   });
 
   socket.on('disconnect', () => {
@@ -117,11 +178,16 @@ io.on('connection', (socket) => {
   // 添加笔记
   socket.on('addNote', ({ note }) => {
     console.log('Adding note:', note);
+    notesData.push(note);
     io.emit('noteAdded', note);
   });
 
   // 删除笔记
   socket.on('deleteNote', ({ noteId }) => {
+    const index = notesData.findIndex(note => note.id === noteId);
+    if (index !== -1) {
+      notesData.splice(index, 1);
+    }
     io.emit('noteDeleted', { noteId });
   });
 

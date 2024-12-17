@@ -449,8 +449,7 @@ function App() {
           alert(`AI生成错误: ${data.error}`);
         }
       }
-    };
-
+    }
     Object.entries(eventHandlers).forEach(([event, handler]) => {
       socket.on(event, handler);
     });
@@ -516,23 +515,22 @@ function App() {
     }
   };
 
-  const handleAddNote = ({ text, position }: { text: string; position: SectionId }) => {
-    if (!socket || !isLoggedIn) return;
-    
+  const handleAddNote = (note: { text: string; position: SectionId }) => {
+    console.log('发送添加便签请求:', note);
     const newNote: Note = {
       id: Date.now().toString(),
-      text,
-      position,
-      author: userId,
-      color: userColor
+      text: note.text,
+      position: note.position,
+      color: userColor,
+      author: userId
     };
-    
-    socket.emit('add_note', newNote);
+    console.log('准备发送的便签数据:', newNote);
+    socket.emit('addNote', { note: newNote });
   };
 
   const handleDeleteNote = (noteId: string) => {
     if (!socket || !isLoggedIn) return;
-    socket.emit('delete_note', noteId);
+    socket.emit('deleteNote', noteId);
   };
 
   const handleGenerateAI = (sectionId: string) => {

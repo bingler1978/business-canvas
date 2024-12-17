@@ -1,4 +1,6 @@
-require('dotenv').config();
+// 根据环境加载配置文件
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+require('dotenv').config({ path: envFile });
 
 const express = require('express');
 const http = require('http');
@@ -10,19 +12,34 @@ const { SYSTEM_PROMPT, SECTION_PROMPTS } = require('./prompts');
 const app = express();
 const server = http.createServer(app);
 
-// 配置允许的域名
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://canvas.yuanjianai.com'
-];
-
 // 配置 CORS
 app.use(cors({
   origin: function(origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // 允许没有 origin 的请求（比如同源请求）
+    if (!origin) {
       callback(null, true);
-    } else {
+      return;
+    }
+    
+    try {
+      // 解析请求源的 URL
+      const originUrl = new URL(origin);
+      
+      // 检查是否是允许的端口
+      if (originUrl.port === '3000') {
+        callback(null, true);
+        return;
+      }
+      
+      // 检查是否是允许的域名
+      if (originUrl.hostname === 'canvas.yuanjianai.com') {
+        callback(null, true);
+        return;
+      }
+      
       callback(new Error('不允许的来源'));
+    } catch (error) {
+      callback(new Error('无效的来源'));
     }
   },
   methods: ["GET", "POST"],
@@ -36,10 +53,31 @@ app.use(express.json());
 const io = new Server(server, {
   cors: {
     origin: function(origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      // 允许没有 origin 的请求（比如同源请求）
+      if (!origin) {
         callback(null, true);
-      } else {
+        return;
+      }
+      
+      try {
+        // 解析请求源的 URL
+        const originUrl = new URL(origin);
+        
+        // 检查是否是允许的端口
+        if (originUrl.port === '3000') {
+          callback(null, true);
+          return;
+        }
+        
+        // 检查是否是允许的域名
+        if (originUrl.hostname === 'canvas.yuanjianai.com') {
+          callback(null, true);
+          return;
+        }
+        
         callback(new Error('不允许的来源'));
+      } catch (error) {
+        callback(new Error('无效的来源'));
       }
     },
     methods: ["GET", "POST"],
